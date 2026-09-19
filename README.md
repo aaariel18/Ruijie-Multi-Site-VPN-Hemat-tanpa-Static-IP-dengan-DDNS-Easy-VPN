@@ -1,211 +1,60 @@
-# Mengurangi Biaya Static IP Antar Cabang dengan Ruijie/Reyee Easy VPN + DDNS
-### A Practical Multi-Site Network Idea for Retail & Branch Offices
+# Multi-Site VPN Ruijie/Reyee Tanpa Harus Bergantung pada Static IP
+### Dua pendekatan: Ruijie DDNS atau Domain Perusahaan + cPanel Dynamic DNS
 
-> **Ide utamanya sederhana:** untuk banyak cabang, kita tidak selalu harus membeli layanan **static public IP** di setiap lokasi hanya supaya jaringan antar-site bisa terhubung.  
-> Jika ISP memberikan **dynamic public IP** yang tetap dapat diakses dari Internet, Ruijie/Reyee dapat memanfaatkan **DDNS + VPN** sehingga koneksi antar-cabang tetap berjalan meskipun alamat IP berubah.
+> **Tujuan utama:** menghubungkan kantor pusat dan banyak cabang secara aman tanpa langsung berasumsi bahwa setiap lokasi harus berlangganan static public IP.
 
-Artikel ini saya tulis sebagai catatan teknis sekaligus ide efisiensi untuk environment **retail, branch office, warehouse, CCTV, POS, dan internal application**.
+Kalau perusahaan memiliki banyak cabang, recurring cost kecil bisa menjadi besar ketika dikalikan puluhan lokasi dan 12 bulan.
+
+Karena itu saya mencoba melihat kebutuhan VPN antar-site dari sudut yang sedikit berbeda:
+
+> **Apakah kita benar-benar membutuhkan IP yang selalu tetap, atau sebenarnya kita hanya membutuhkan hostname yang selalu mengarah ke public IP terbaru?**
+
+Pada Ruijie/Reyee, ada dua pendekatan yang menurut saya layak dipertimbangkan.
 
 ---
 
-## Executive Summary / Ringkasan untuk Management
+# Dua Pilihan DDNS / Two Practical Options
 
-Saat perusahaan mulai memiliki banyak cabang, salah satu biaya yang sering ikut membesar adalah konektivitas antar-site.
+## Opsi A — Ruijie/Reyee DDNS
 
-Pendekatan tradisional biasanya seperti ini:
-
-~~~text
-HQ
-Static Public IP
-   |
-   +--------- VPN --------- Branch 01
-   |                       Static Public IP
-   |
-   +--------- VPN --------- Branch 02
-   |                       Static Public IP
-   |
-   +--------- VPN --------- Branch 03
-                           Static Public IP
-~~~
-
-Secara teknis ini mudah dipahami, tetapi kalau static IP dikenakan biaya bulanan oleh provider, maka biaya akan bertambah seiring bertambahnya jumlah cabang.
-
-Alternatif yang menarik adalah:
+Pendekatan paling sederhana.
 
 ~~~text
-Internet biasa
-+
 Dynamic Public IP
-+
-Ruijie / Reyee Gateway
-+
-DDNS
-+
+       |
+       v
+Ruijie/Reyee Gateway
+       |
+       v
+Ruijie DDNS
+       |
+       v
+hostname.ruijieddns.com
+       |
+       v
 Easy VPN / IPsec
 ~~~
 
-Dengan desain ini, VPN tidak lagi bergantung pada angka IP yang harus selalu tetap. Peer dapat menggunakan **domain name** yang mengikuti perubahan dynamic public IP.
-
-**Business idea:** jangan langsung membeli static IP untuk seluruh cabang. Cek dulu apakah koneksi existing mendapatkan **public dynamic IP** dan apakah Ruijie/Reyee gateway di lokasi tersebut dapat menjadi bagian dari desain Easy VPN/DDNS.
-
----
-
-## Kenapa Static IP Menjadi Biaya yang Perlu Dievaluasi?
-
-Static public IP memang nyaman.
-
-Contohnya:
-
-~~~text
-HQ = 203.x.x.10
-Branch A = 203.x.x.20
-Branch B = 203.x.x.30
-~~~
-
-Alamat tidak berubah sehingga peer VPN mudah diarahkan.
-
-Namun pada environment multi-branch, biaya bulanannya dapat menjadi recurring OPEX.
-
-Formula sederhananya:
-
-~~~text
-Annual Static-IP OPEX
-=
-Jumlah Site
-x
-Biaya Static IP per Bulan
-x
-12
-~~~
-
-Semakin banyak cabang, semakin besar recurring cost.
-
-Karena itu pertanyaan yang menurut saya layak diajukan sebelum upgrade layanan ISP adalah:
-
-> **Apakah kita memang membutuhkan static IP di setiap site, atau sebenarnya hanya membutuhkan endpoint yang tetap bisa ditemukan?**
-
-Di sinilah DDNS menjadi menarik.
-
----
-
-# 1. Dynamic Public IP Bukan Berarti Tidak Bisa VPN
-
-Dynamic public IP berarti alamat public dari ISP dapat berubah.
-
-Misalnya hari ini:
-
-~~~text
-36.x.x.10
-~~~
-
-kemudian berubah menjadi:
-
-~~~text
-103.x.x.25
-~~~
-
-Kalau peer VPN dikonfigurasi menggunakan IP lama, tunnel bisa gagal.
-
-Dengan **Dynamic DNS (DDNS)**, kita menggunakan nama domain:
-
-~~~text
-hq-company.ruijieddns.com
-~~~
-
-Ketika public IP berubah, mapping domain diperbarui.
-
-Sehingga konsepnya menjadi:
-
-~~~text
-hq-company.ruijieddns.com
-           |
-           v
-Current Public IP
-           |
-           v
-Ruijie/Reyee Gateway
-           |
-           v
-VPN Tunnel
-~~~
-
-Ruijie mendokumentasikan DDNS pada Ruijie Cloud dengan opsi **map to Public IP**.
+Ruijie Cloud menyediakan fitur DDNS yang dapat memetakan hostname ke public IP gateway.
 
 ![Ruijie DDNS Configuration](https://community.ruijie.com/data/attachment/forum/202307/04/161945kl0w72ggt79mhp2l.png)
 
-**Source:** [Ruijie Community - How to configure Ruijie DDNS on Ruijie Cloud](https://community.ruijie.com/forum.php?mod=viewthread&tid=5846)
+**Source:** [Ruijie Community - How to configure Ruijie DDNS on Ruijie Cloud](https://community.ruijienetworks.com/forum.php?mod=viewthread&tid=5846)
+
+### Kapan saya memilih opsi ini?
+
+- deployment ingin cepat;
+- tidak perlu custom hostname perusahaan;
+- semua site memang menggunakan ekosistem Ruijie/Reyee;
+- tim IT ingin konfigurasi yang sederhana.
 
 ---
 
-# 1A. Alternatif yang Lebih Profesional: Pakai Domain Sendiri via cPanel DDNS
+## Opsi B — Domain Perusahaan + cPanel Dynamic DNS
 
-Selain memakai hostname DDNS bawaan Ruijie/Reyee, kita juga bisa menggunakan **domain milik perusahaan sendiri**.
+Kalau perusahaan sudah mempunyai domain sendiri, endpoint VPN bisa dibuat lebih mudah dikenali.
 
 Contoh:
-
-~~~text
-vpn-hq.company.co.id
-~~~
-
-atau:
-
-~~~text
-hq-vpn.company.co.id
-~~~
-
-Konsepnya:
-
-~~~text
-HQ Internet
-Dynamic Public IP
-        |
-        v
-Ruijie/Reyee Gateway
-        |
-        +-----------------------------+
-                                      |
-                         cPanel Dynamic DNS
-                                      |
-                                      v
-                          vpn-hq.company.co.id
-                                      |
-                                      v
-                           Branch Reyee EG
-                         Peer Gateway = Domain
-~~~
-
-Biznet Gio menjelaskan bahwa fitur **Dynamic DNS di cPanel** dapat mengaitkan alamat IP public yang berubah dengan hostname yang tetap. Setelah hostname DDNS dibuat, cPanel menghasilkan **webcall URL**. Ketika URL tersebut diakses dari jaringan HQ, cPanel mendeteksi public IP yang digunakan lalu memperbarui DNS record secara otomatis.
-
-### Cara kerjanya
-
-1. Domain perusahaan dikelola pada hosting/cPanel yang mendukung Dynamic DNS.
-2. Buat hostname, misalnya:
-
-~~~text
-vpn-hq.company.co.id
-~~~
-
-3. cPanel menghasilkan URL update / webcall untuk hostname tersebut.
-4. Dari sisi HQ, jalankan request ke URL itu secara periodik, misalnya dengan cron job.
-5. Saat public IP ISP berubah, request berikutnya akan membuat DNS record ikut diperbarui.
-6. Di branch Reyee EG, isi **Peer Gateway** menggunakan domain:
-
-~~~text
-vpn-hq.company.co.id
-~~~
-
-Dengan cara ini, konfigurasi VPN di branch tidak perlu diubah setiap kali public IP HQ berubah.
-
-**Reference:** [Biznet Gio - Cara Membuat DDNS di cPanel](https://kb.biznetgio.com/id_ID/informasi/cara-membuat-ddns-di-cpanel)
-
-### Native Ruijie DDNS vs Custom Domain
-
-| Pilihan | Contoh | Kelebihan |
-|---|---|---|
-| Ruijie/Reyee DDNS | `hq-name.ruijieddns.com` | Cepat dan sederhana untuk deployment |
-| Custom Domain via cPanel | `vpn-hq.company.co.id` | Lebih profesional, mudah dikenali, tidak tergantung nama domain vendor |
-
-Untuk perusahaan, saya lebih menyukai custom domain karena dokumentasi internal menjadi lebih rapi:
 
 ~~~text
 vpn-hq.company.co.id
@@ -213,272 +62,165 @@ vpn-dc.company.co.id
 vpn-warehouse.company.co.id
 ~~~
 
-dibanding harus mengingat hostname yang berbeda dari identitas domain perusahaan.
-
-### Yang perlu diperhatikan
-
-cPanel DDNS hanya menyelesaikan masalah **perubahan alamat IP**. Fitur ini tidak menghilangkan kebutuhan agar endpoint VPN benar-benar dapat dijangkau dari Internet.
-
-Jika Ruijie/Reyee Gateway langsung mendapatkan **public dynamic IP** pada WAN, domain dapat diarahkan ke IP tersebut.
-
-Kalau gateway berada di belakang modem/router lain yang melakukan NAT, sisi upstream perlu disesuaikan. Dokumentasi Reyee untuk IPsec menyebut bahwa jika IPsec server berada di belakang NAT, UDP **500** dan **4500** perlu dipetakan ke VPN gateway.
+Arsitekturnya:
 
 ~~~text
-Internet
+ISP
+Dynamic Public IP
+       |
+       v
+Ruijie/Reyee Gateway
+       |
+       +-------------------------+
+                                 |
+                     cPanel Dynamic DNS
+                                 |
+                                 v
+                     vpn-hq.company.co.id
+                                 |
+                                 v
+                        Branch Reyee EG
+                     Peer Gateway = Domain
+~~~
+
+Biznet Gio menjelaskan bahwa fitur **Dynamic DNS pada cPanel** mengaitkan public IP yang berubah dengan hostname tetap. Setelah hostname dibuat, cPanel menyediakan **webcall URL**; ketika URL itu diakses dari jaringan terkait, public IP terdeteksi dan DNS record diperbarui.
+
+**Reference:** [Biznet Gio - Cara Membuat DDNS di cPanel](https://kb.biznetgio.com/id_ID/informasi/cara-membuat-ddns-di-cpanel)
+
+Contoh interface Dynamic DNS pada cPanel:
+
+![cPanel Dynamic DNS Interface](https://blog.cpanel.com/wp-content/uploads/2020/12/01-cpanel-create-dynamic-dns.png)
+
+**Source:** [cPanel - How to Host Dynamic DNS Domains](https://www.cpanel.net/blog/tips-and-tricks/how-to-host-dynamic-dns-domains-with-cpanel/)
+
+### Cara kerjanya
+
+1. Buat hostname di cPanel, misalnya:
+
+~~~text
+vpn-hq.company.co.id
+~~~
+
+2. cPanel menghasilkan webcall URL.
+
+3. Jalankan webcall tersebut secara periodik dari host di jaringan HQ, misalnya server Linux, automation host, NAS, atau perangkat lain yang memang bisa melakukan HTTP request.
+
+4. Ketika ISP mengganti public IP, webcall berikutnya memperbarui DNS record.
+
+5. Di branch Reyee, gunakan:
+
+~~~text
+Peer Gateway = vpn-hq.company.co.id
+~~~
+
+Dokumentasi Reyee EG menyebut bahwa pada IPsec client, **Peer Gateway dapat berupa public IP HQ atau domain**.
+
+**Source:** [Reyee EG PoC Guide - IPsec VPN](https://reyee.ruijie.com/en-global/support/documents/slide_76717/)
+
+---
+
+# Jadi Pilih Mana?
+
+| Kebutuhan | Ruijie DDNS | Domain Perusahaan + cPanel DDNS |
+|---|---:|---:|
+| Cepat dikonfigurasi | ✅ | ✅ |
+| Tidak perlu membeli static IP hanya karena alamat berubah | ✅* | ✅* |
+| Hostname milik perusahaan | - | ✅ |
+| Mudah dikenali dokumentasi internal | Cukup | ✅ |
+| Ketergantungan hostname vendor | Ada | Tidak |
+| Cocok untuk PoC cepat | ✅ | ✅ |
+| Cocok untuk branding internal / enterprise naming | Cukup | ✅ |
+
+`*` Tetap bergantung pada kondisi ISP dan reachability public IP. DDNS tidak membypass CGNAT.
+
+Bagi saya, **Ruijie DDNS cocok untuk deployment cepat**, sedangkan **custom company domain cocok ketika network sudah mulai dikelola sebagai infrastructure jangka panjang**.
+
+---
+
+# Executive Summary untuk Management
+
+Skenario tradisional:
+
+~~~text
+HQ
+Static Public IP
    |
-ISP Modem / ONT
+   +--------- VPN -------- Branch 01
+   |                      Static IP
    |
-   | UDP 500 / 4500
+   +--------- VPN -------- Branch 02
+   |                      Static IP
+   |
+   +--------- VPN -------- Branch 03
+                          Static IP
+~~~
+
+Kalau provider mengenakan biaya static IP per site, recurring cost bertambah bersama jumlah cabang.
+
+Alternatif yang dapat diuji:
+
+~~~text
+Internet Existing
++
+Dynamic Public IP
++
+Ruijie/Reyee Gateway
++
+DDNS
++
+IPsec / Easy VPN
+~~~
+
+DDNS membuat peer menggunakan **hostname**, bukan bergantung pada angka public IP yang selalu sama.
+
+### Business Question
+
+> **Apakah static IP benar-benar menjadi kebutuhan teknis, atau hanya digunakan karena kita membutuhkan alamat endpoint yang konsisten?**
+
+Kalau kebutuhan sebenarnya adalah endpoint yang tetap dapat ditemukan, DDNS dapat menjadi salah satu opsi untuk mengurangi biaya berulang.
+
+---
+
+# Bagaimana Ruijie/Reyee Membantu?
+
+Ruijie/Reyee EG dapat digunakan sebagai IPsec server maupun client.
+
+Pada contoh resmi Reyee:
+
+- HQ berfungsi sebagai IPsec server;
+- branch berfungsi sebagai IPsec client;
+- Peer Gateway di branch dapat berupa **public IP atau domain**;
+- jika IPsec server berada di belakang perangkat NAT, UDP **500 dan 4500** perlu dipetakan.
+
+Artinya skenario ini memungkinkan:
+
+~~~text
+Branch
+   |
+   | VPN initiated
    v
-Ruijie/Reyee Gateway
+vpn-hq.company.co.id
    |
-IPsec VPN
-~~~
-
-Jika koneksi ISP menggunakan **CGNAT** dan tidak memberikan inbound mapping, custom DDNS maupun Ruijie DDNS tidak otomatis menyelesaikan masalah tersebut.
-
-**English takeaway:**  
-A custom domain can replace a vendor DDNS hostname, but DDNS solves name-to-IP changes - it does not bypass CGNAT.
-
-
----
-
-# 2. Ruijie/Reyee Mendukung Peer VPN Menggunakan IP atau Domain
-
-Pada dokumentasi pengujian IPsec Reyee EG, branch dikonfigurasi sebagai client dan **Peer Gateway** dapat menggunakan:
-
-~~~text
-HQ Public IP
-atau
-HQ Domain Name
-~~~
-
-Artinya, ketika HQ menggunakan public IP dinamis, domain/DDNS dapat menjadi layer yang menjaga endpoint tetap dapat ditemukan.
-
-Desain sederhana:
-
-~~~mermaid
-flowchart LR
-    HQ["HQ - Ruijie/Reyee EG<br/>Dynamic Public IP + DDNS"]
-    B1["Branch 01<br/>Reyee EG"]
-    B2["Branch 02<br/>Reyee EG"]
-    B3["Branch 03<br/>Reyee EG"]
-
-    B1 -->|IPsec / Easy VPN| HQ
-    B2 -->|IPsec / Easy VPN| HQ
-    B3 -->|IPsec / Easy VPN| HQ
-~~~
-
-Pada banyak skenario, branch cukup menjadi pihak yang **menginisiasi tunnel** ke endpoint HQ.
-
----
-
-# 3. Easy VPN untuk Multi-Branch
-
-Ruijie/Reyee memang memposisikan Easy VPN untuk skenario seperti retail dan CCTV multi-cabang.
-
-Dalam dokumentasi resmi mereka, koneksi VPN digunakan untuk menghubungkan cabang ke kantor pusat, sehingga monitoring dan resource dapat dikelola secara terpusat.
-
-![Easy VPN - Official Ruijie/Reyee Documentation](https://eo-sgp-cos.ruijie.com/background/other/2024-08-14/90592fcb3496462987b59849fdaa23dd.png)
-
-**Source:** [Ruijie Reyee - Network Solution in Chain Store CCTV Scenarios](https://reyee.ruijie.com/id-id/blog/cctv-chain-store-solution/)
-
-Bagi saya, konsep ini tidak hanya relevan untuk CCTV.
-
-VPN antar-site juga dapat digunakan untuk menghubungkan resource seperti:
-
-- POS / Point of Sale;
-- application server;
-- internal web application;
-- database service tertentu;
-- NVR / CCTV monitoring;
-- printer atau device management;
-- VoIP;
-- monitoring server;
-- file/service internal;
-- remote IT management.
-
-Tentu akses tetap harus dibatasi dengan VLAN, firewall policy, dan prinsip **least privilege**.
-
----
-
-# 4. Satu Gateway, Beberapa Fungsi
-
-Hal yang membuat pendekatan ini menarik secara bisnis adalah gateway Reyee tidak hanya berfungsi sebagai VPN router.
-
-Pada lini router mereka, Ruijie/Reyee juga menawarkan kemampuan seperti:
-
-- routing;
-- load balancing;
-- multi-WAN;
-- QoS;
-- Easy VPN;
-- NAT traversal;
-- DDNS;
-- cloud management;
-- remote maintenance;
-- VLAN;
-- SD-WAN / multi-branch features pada model/fitur yang sesuai.
-
-Jadi investasi perangkat tidak hanya menyelesaikan satu kebutuhan VPN saja.
-
-Konsepnya:
-
-~~~text
-                 INTERNET
-                    |
-            +-------+-------+
-            |  Reyee / EG   |
-            +-------+-------+
-                    |
-       +------------+------------+
-       |            |            |
-      POS          CCTV         Staff
-      VLAN         VLAN         VLAN
-       |            |            |
-       +------ Secure VPN -------+
-                    |
-                    v
-                   HQ
-~~~
-
-Untuk retail, manfaatnya menjadi lebih luas:
-
-**Connectivity + Security + VPN + Cloud Management + Remote Troubleshooting**
-
----
-
-# 5. Gambaran Retail / Branch Solution
-
-Ruijie/Reyee juga menyediakan solusi khusus untuk retail dan branch.
-
-![Retail Branch Topology - Ruijie Reyee](https://reyee.ruijie.com/id-id/solutions/smb/retailchain/image/page5-img.png)
-
-**Source:** [Ruijie Reyee - Retail & Branch Network Solution](https://reyee.ruijie.com/id-id/solutions/smb/retailchain/)
-
-Di solusi retail mereka, gateway digunakan untuk melayani berbagai kebutuhan site seperti komputer, Wi-Fi, VoIP, printer, dan POS, sekaligus menyediakan remote/cloud management dan fitur VPN.
-
----
-
-# 6. Apa Keuntungan untuk Perusahaan?
-
-## A. Mengurangi Ketergantungan pada Static IP per Cabang
-
-Ini adalah benefit yang paling menarik.
-
-Kalau selama ini desainnya:
-
-~~~text
-Setiap Cabang
-=
-Internet
-+
-Static IP add-on
-+
-Router
-~~~
-
-kita bisa mengevaluasi:
-
-~~~text
-Setiap Cabang
-=
-Internet dengan Public Dynamic IP
-+
-Ruijie/Reyee Gateway
-+
-VPN/DDNS
-~~~
-
-Recurring cost static IP berpotensi dikurangi pada site-site yang secara teknis memenuhi syarat.
-
----
-
-## B. Centralized Management
-
-Admin tidak harus selalu datang ke cabang hanya untuk mengetahui kondisi router.
-
-Ruijie Cloud memberikan visibility dan remote management untuk perangkat yang terhubung.
-
-![Ruijie Cloud Gateway List](https://community.ruijie.com/data/attachment/forum/202307/04/161924oxkkc4r9faxs9wqm.png)
-
-**Source:** [Ruijie Community - Ruijie DDNS Configuration](https://community.ruijie.com/forum.php?mod=viewthread&tid=5846)
-
-Untuk tim IT dengan banyak cabang, ini penting karena biaya bukan hanya ISP.
-
-Ada juga:
-
-~~~text
-Operational Cost
-=
-Travel
-+
-Troubleshooting Time
-+
-Downtime
-+
-Manpower
-~~~
-
-Remote visibility dapat membantu mengurangi sebagian operational overhead tersebut.
-
----
-
-## C. Lebih Mudah Scale-Up
-
-Ketika cabang baru dibuka:
-
-~~~text
-New Branch
+   v
+Current Dynamic Public IP
    |
-Internet
-   |
-Ruijie/Reyee Gateway
-   |
-VPN to HQ
-   |
-Central Resources
+   v
+HQ Ruijie/Reyee Gateway
 ~~~
 
-Secara desain, kita tidak perlu langsung mengubah strategi menjadi leased line atau static IP di semua lokasi.
-
-Tambahkan site, definisikan policy, buat tunnel, lalu masukkan ke monitoring yang sama.
+**Source:** [Reyee EG PoC Guide](https://reyee.ruijie.com/en-global/support/documents/slide_76717/)
 
 ---
 
-## D. Cocok untuk Retail
-
-Pada toko, yang kita butuhkan bukan sekadar Internet.
-
-Biasanya ada:
-
-~~~text
-POS
-CCTV
-Office PC
-Printer
-Wi-Fi Staff
-Guest Wi-Fi
-VoIP
-Remote Support
-~~~
-
-Semua traffic tersebut tidak seharusnya bercampur tanpa kontrol.
-
-Dengan gateway yang mendukung VLAN, VPN, QoS, multi-WAN dan cloud management, satu perangkat bisa menjadi pusat kontrol jaringan cabang.
-
----
-
-# 7. Contoh Desain yang Saya Pilih
-
-Untuk skenario multi-store:
+# Multi-Branch / Retail Architecture
 
 ~~~mermaid
 flowchart TB
     CLOUD["Ruijie Cloud<br/>Central Management"]
 
-    HQ["HEAD OFFICE<br/>Reyee EG Gateway<br/>Public Dynamic IP + DDNS"]
-    APP["Application / Monitoring / Internal Resources"]
+    HQ["HEAD OFFICE<br/>Ruijie/Reyee EG<br/>Dynamic Public IP"]
+    DDNS["DDNS Endpoint<br/>Ruijie DDNS OR Company Domain"]
+    APP["Internal Apps / Monitoring / Server"]
 
     S1["STORE 01<br/>Reyee EG<br/>POS - CCTV - Staff"]
     S2["STORE 02<br/>Reyee EG<br/>POS - CCTV - Staff"]
@@ -489,77 +231,111 @@ flowchart TB
     CLOUD -. Management .-> S2
     CLOUD -. Management .-> S3
 
-    S1 -->|Secure VPN| HQ
-    S2 -->|Secure VPN| HQ
-    S3 -->|Secure VPN| HQ
+    DDNS --> HQ
+    S1 -->|IPsec VPN| DDNS
+    S2 -->|IPsec VPN| DDNS
+    S3 -->|IPsec VPN| DDNS
+
     HQ --> APP
 ~~~
 
-Saya lebih suka model **hub-and-spoke** untuk banyak cabang karena lebih mudah dikontrol:
+Ruijie/Reyee juga mendokumentasikan Easy VPN untuk skenario retail chain dan centralized CCTV monitoring.
 
-~~~text
-Branch A ----\
-Branch B -----\
-Branch C ------> HQ
-Branch D -----/
-Branch E ----/
-~~~
+![Easy VPN - Official Ruijie/Reyee Documentation](https://eo-sgp-cos.ruijie.com/background/other/2024-08-14/90592fcb3496462987b59849fdaa23dd.png)
 
-Tidak semua cabang perlu membuat tunnel langsung ke semua cabang lainnya.
+**Source:** [Ruijie Reyee - Chain Store CCTV Solution](https://reyee.ruijie.com/id-id/blog/cctv-chain-store-solution/)
 
 ---
 
-# 8. Cost-Saving Model
+# Kenapa Ini Menarik untuk Retail & Multi-Site?
 
-Saya tidak memasukkan angka harga provider karena tarif berbeda-beda.
+Satu cabang biasanya bukan hanya mempunyai satu PC.
 
-Management cukup memasukkan harga aktual ke formula berikut.
-
-### Opsi A - Static IP di Semua Site
+Di dalam satu site bisa ada:
 
 ~~~text
-Yearly Cost
-=
-(Number of Branches x Monthly Static-IP Fee x 12)
-+
-Internet Subscription
-+
-Router
+POS
+CCTV / NVR
+Office PC
+Printer
+Wi-Fi Staff
+Guest Wi-Fi
+VoIP
+Internal Application
+Remote IT Support
 ~~~
 
-### Opsi B - Dynamic Public IP + Ruijie/Reyee
+Gateway menjadi lebih bernilai kalau tidak hanya berfungsi sebagai Internet router.
+
+Pada solusi retail Ruijie/Reyee, gateway juga digunakan untuk VPN, centralized/remote maintenance, dual WAN dan kebutuhan jaringan cabang.
+
+![Retail Branch Solution](https://reyee.ruijie.com/id-id/solutions/smb/retailchain/image/page5-img.png)
+
+**Source:** [Ruijie Reyee - Retail & Branch Network Solution](https://reyee.ruijie.com/id-id/solutions/smb/retailchain/)
+
+---
+
+# Cost-Saving Thinking
+
+Saya sengaja tidak memasukkan angka provider tertentu karena harga setiap ISP berbeda.
+
+Management cukup memasukkan biaya aktual.
+
+## Skenario Static IP
 
 ~~~text
-Yearly Cost
+Annual Static-IP Cost
 =
-Internet Subscription
+Jumlah Site
+x
+Monthly Static-IP Fee
+x
+12
+~~~
+
+Contoh cara berpikir:
+
+~~~text
+20 Cabang
+x
+Biaya Static IP / bulan
+x
+12
+=
+Recurring Cost / tahun
+~~~
+
+## Skenario Dynamic Public IP + DDNS
+
+~~~text
+Existing Internet
 +
 Gateway Investment
++
+DDNS
 +
 Operational Maintenance
 ~~~
 
-Setelah CAPEX router dikeluarkan, biaya static IP bulanan pada cabang yang tidak membutuhkannya dapat dihindari.
+Yang dibandingkan bukan sekadar:
 
-### Break-Even Thinking
+> Harga Router vs Harga Static IP satu bulan.
 
-~~~text
-Device Investment
-vs
-Static-IP Recurring Cost
-~~~
+Tetapi:
 
-Semakin banyak cabang dan semakin panjang periode operasional, semakin penting menghitung total recurring cost daripada hanya melihat harga perangkat di awal.
+> **CAPEX perangkat dibanding recurring OPEX selama beberapa tahun dan beberapa puluh site.**
 
 ---
 
-# 9. Tetapi Ada Satu Hal Penting: Dynamic Public IP != CGNAT
+# Dynamic Public IP Bukan CGNAT
 
-Ini bagian yang wajib dicek sebelum membeli perangkat.
+Ini bagian terpenting sebelum proposal dibawa ke procurement.
 
-DDNS bekerja baik ketika WAN benar-benar memiliki **public IP**, meskipun IP tersebut berubah.
+DDNS hanya membantu ketika public IP berubah.
 
-Kalau ISP menempatkan pelanggan di balik **CGNAT**, WAN router bisa mendapat IP seperti:
+DDNS **tidak membuat private/CGNAT address menjadi public IP**.
+
+Contoh alamat yang perlu dicurigai:
 
 ~~~text
 10.x.x.x
@@ -568,55 +344,128 @@ Kalau ISP menempatkan pelanggan di balik **CGNAT**, WAN router bisa mendapat IP 
 100.64.x.x - 100.127.x.x
 ~~~
 
-Pada kondisi tersebut, DDNS saja tidak otomatis membuat router dapat menerima koneksi dari Internet.
-
 ### Decision Table
 
-| Kondisi WAN | VPN/DDNS |
+| Kondisi Internet | Hasil |
 |---|---|
-| Static Public IP | ✅ Sangat mudah |
-| Dynamic Public IP | ✅ Cocok dengan DDNS |
-| HQ Public IP + Branch Dynamic | ✅ Sangat masuk akal |
-| Router di balik modem NAT tetapi port forwarding tersedia | ✅ Bisa disesuaikan |
-| CGNAT ISP dan tidak ada inbound mapping | ⚠️ Perlu solusi lain / koordinasi ISP |
+| Static Public IP | ✅ VPN mudah dibangun |
+| Dynamic Public IP | ✅ Sangat cocok untuk DDNS |
+| HQ Dynamic Public IP + Branch Dynamic | ✅ Layak diuji |
+| HQ di belakang modem NAT + port forwarding | ✅ Dapat disesuaikan |
+| ISP CGNAT tanpa inbound mapping | ⚠️ DDNS saja tidak cukup |
 
-Jadi rekomendasi saya bukan:
+Jadi pesan yang tepat bukan:
 
-> "Tidak perlu public IP sama sekali."
+> **"Dengan Ruijie kita tidak butuh public IP."**
 
 Tetapi:
 
-> **"Tidak perlu membayar static IP di setiap site jika dynamic public IP yang tersedia sudah memenuhi kebutuhan VPN dan DDNS."**
-
-Perbedaannya penting.
+> **"Kalau ISP sudah memberi dynamic public IP yang reachable, kita belum tentu perlu membayar upgrade static IP hanya untuk menjaga alamat VPN tetap konsisten."**
 
 ---
 
-# 10. Checklist Sebelum Implementasi
+# Dua Contoh Implementasi
+
+## Scenario A — Native Ruijie DDNS
+
+~~~text
+HQ ISP
+Dynamic Public IP
+      |
+      v
+Ruijie EG
+      |
+Ruijie Cloud DDNS
+      |
+      v
+hq-example.ruijieddns.com
+      |
+      +---- Branch 01
+      +---- Branch 02
+      +---- Branch 03
+~~~
+
+### Kelebihan
+
+- sederhana;
+- minim komponen tambahan;
+- cocok untuk quick deployment;
+- mudah dijadikan PoC.
+
+---
+
+## Scenario B — Company Domain
+
+~~~text
+HQ ISP
+Dynamic Public IP
+      |
+      v
+Ruijie EG
+      |
+      +----- Local automation/webcall
+      |
+      v
+cPanel Dynamic DNS
+      |
+      v
+vpn-hq.company.co.id
+      |
+      +---- Branch 01
+      +---- Branch 02
+      +---- Branch 03
+~~~
+
+### Kelebihan
+
+- hostname sesuai identitas perusahaan;
+- lebih mudah dibaca pada dokumentasi;
+- bisa menggunakan naming convention internal;
+- tidak bergantung pada nama domain DDNS vendor.
+
+Contoh naming:
+
+~~~text
+vpn-hq.company.co.id
+vpn-jkt01.company.co.id
+vpn-tgr01.company.co.id
+vpn-warehouse.company.co.id
+~~~
+
+---
+
+# Network Segmentation Tetap Penting
+
+VPN antar-cabang bukan berarti semua perangkat boleh saling mengakses.
+
+Contoh sederhana:
+
+~~~text
+VLAN 10 - POS
+VLAN 20 - Staff
+VLAN 30 - CCTV
+VLAN 40 - Guest Wi-Fi
+VLAN 50 - Management
+~~~
+
+Kemudian firewall policy menentukan traffic mana yang memang diperlukan.
+
+Contoh:
+
+~~~text
+POS -> Application Server        ALLOW
+CCTV -> Monitoring Server       ALLOW
+Guest -> Internal Network       DENY
+Management -> Network Device    ALLOW
+~~~
+
+**Connectivity without access control is not a security strategy.**
+
+---
+
+# Proof of Concept yang Saya Sarankan
 
 Sebelum procurement massal:
-
-- [ ] cek WAN IP dari ISP;
-- [ ] bandingkan WAN IP router dengan public IP Internet;
-- [ ] pastikan tidak berada di CGNAT untuk endpoint yang perlu inbound;
-- [ ] cek dukungan DDNS pada model gateway;
-- [ ] cek protocol VPN yang akan digunakan;
-- [ ] tentukan HQ sebagai hub;
-- [ ] tentukan subnet unik di setiap cabang;
-- [ ] hindari subnet overlap;
-- [ ] pisahkan POS, CCTV, staff, guest dengan VLAN;
-- [ ] buat firewall policy;
-- [ ] uji failover Internet jika menggunakan dual WAN;
-- [ ] uji reconnect VPN ketika public IP berubah;
-- [ ] dokumentasikan recovery dan troubleshooting.
-
----
-
-# 11. Proof of Concept yang Saya Sarankan
-
-Jangan langsung beli untuk seluruh cabang.
-
-Mulai dari:
 
 ~~~text
 1 HQ
@@ -624,124 +473,120 @@ Mulai dari:
 2 Branch
 ~~~
 
-Test selama beberapa minggu.
+Lakukan test nyata.
 
-Yang perlu diuji:
-
-### Test 1 - Dynamic IP Change
-
-Reconnect ISP atau tunggu lease berubah.
-
-Pastikan:
+## Test 1 — Dynamic IP Change
 
 ~~~text
-IP changes
-   |
-DDNS updates
-   |
+Public IP changes
+      |
+DDNS record updates
+      |
 VPN reconnects
-   |
-Service reachable again
+      |
+Application reachable
 ~~~
 
-### Test 2 - POS / Internal Application
+## Test 2 — DNS Recovery Time
 
-Pastikan aplikasi cabang dapat berkomunikasi dengan service di HQ sesuai policy.
+Catat berapa lama hostname mulai mengarah ke IP baru.
 
-### Test 3 - CCTV
+Ini penting terutama jika menggunakan custom DNS karena TTL dan update path dapat memengaruhi recovery time.
 
-Uji akses NVR/IPC antar-site bila diperlukan.
+## Test 3 — POS / Internal Application
 
-### Test 4 - Failover
+Pastikan branch dapat mengakses hanya resource yang diperlukan.
 
-Jika menggunakan dual WAN:
+## Test 4 — CCTV / Monitoring
+
+Pastikan kebutuhan bandwidth dan latency masih sesuai.
+
+## Test 5 — ISP Failover
+
+Jika gateway menggunakan dual WAN:
 
 ~~~text
 WAN 1 Down
    |
 WAN 2 Active
    |
-VPN / Business Traffic Recover
+DDNS / VPN Recovery
+   |
+Business Service Available
 ~~~
 
-### Test 5 - Remote Troubleshooting
+## Test 6 — Remote Troubleshooting
 
-Pastikan tim IT bisa melihat status gateway dan melakukan diagnosis melalui cloud management.
-
----
-
-# 12. Perangkat yang Bisa Dievaluasi
-
-Dalam materi chain-store resmi mereka, Ruijie/Reyee antara lain menyebut:
-
-- **RG-EG105GW(T)**
-- **RG-EG310GH-P-E**
-
-sebagai perangkat yang digunakan pada contoh solusi retail/CCTV mereka.
-
-Bukan berarti dua model itu otomatis cocok untuk semua perusahaan.
-
-Sebelum memilih model, cek:
-
-- jumlah user;
-- Internet throughput;
-- VPN throughput;
-- jumlah tunnel;
-- kebutuhan PoE;
-- jumlah WAN;
-- jumlah VLAN;
-- jumlah branch;
-- kebutuhan Wi-Fi;
-- model firmware dan fitur yang tersedia.
-
-**Choose the device based on workload, not only price.**
+Pastikan tim IT benar-benar dapat melakukan diagnosis tanpa selalu datang ke site.
 
 ---
 
-# 13. Kesimpulan / Conclusion
+# Checklist Sebelum Implementasi
 
-Kalau perusahaan mempunyai banyak site, saya melihat Ruijie/Reyee bukan hanya sebagai router Internet.
+- [ ] cek IP WAN yang diterima router;
+- [ ] bandingkan dengan public IP Internet;
+- [ ] identifikasi apakah ISP memakai CGNAT;
+- [ ] tentukan DDNS: Ruijie atau company domain;
+- [ ] jika custom domain, siapkan cPanel Dynamic DNS/webcall;
+- [ ] tentukan subnet unik per cabang;
+- [ ] hindari overlapping subnet;
+- [ ] tentukan HQ / VPN hub;
+- [ ] buat VLAN POS, Staff, CCTV, Guest, Management;
+- [ ] siapkan firewall policy;
+- [ ] cek UDP 500/4500 jika endpoint IPsec berada di belakang NAT;
+- [ ] test perubahan public IP;
+- [ ] test VPN reconnect;
+- [ ] test application;
+- [ ] dokumentasikan hasil PoC.
 
-Nilai besarnya justru ketika beberapa fungsi digabungkan:
+---
+
+# Kesimpulan / Conclusion
+
+Menurut saya, keputusan network multi-site sebaiknya tidak dimulai dari pertanyaan:
+
+> **"Provider mana yang harus kita upgrade ke static IP?"**
+
+Pertanyaan yang lebih tepat:
+
+> **"Apa kebutuhan teknis kita, dan apakah dynamic public IP + DDNS sudah cukup untuk memenuhi kebutuhan itu?"**
+
+Ada dua jalur yang sama-sama valid:
 
 ~~~text
-Routing
-+
-VPN
-+
-DDNS
-+
-VLAN
-+
-Multi-WAN
-+
-Remote Management
-+
-Cloud Visibility
+OPTION A
+Ruijie/Reyee DDNS
+-> sederhana dan cepat
+
+OPTION B
+Company Domain + cPanel DDNS
+-> lebih profesional dan fleksibel
 ~~~
 
-Dari sisi bisnis, ini membuka opsi untuk **mengurangi ketergantungan pada static public IP berbayar di setiap cabang**, selama ISP di lokasi memberikan public dynamic IP yang sesuai.
+Keduanya dapat digunakan bersama Ruijie/Reyee IPsec selama kondisi ISP dan network design memenuhi persyaratan.
 
-Artinya perusahaan dapat mengevaluasi:
+Kalau PoC membuktikan bahwa:
 
-> Apakah lebih efektif terus membayar recurring static-IP fee di puluhan cabang, atau berinvestasi pada gateway yang sekaligus memberikan routing, VPN, centralized management, dan network control?
+- DDNS update stabil;
+- VPN reconnect otomatis;
+- application tetap reachable;
+- security policy berjalan;
+- remote management efektif;
 
-Bagi saya, jawabannya perlu dibuktikan melalui **Proof of Concept**, bukan asumsi.
+maka perusahaan memiliki dasar teknis yang lebih kuat untuk memutuskan apakah biaya static IP di setiap cabang memang masih diperlukan.
 
-Kalau POC menunjukkan DDNS update berjalan, VPN reconnect stabil, service cabang tetap tersedia, dan remote management efektif, maka solusi ini layak dipertimbangkan sebagai strategi multi-site yang lebih hemat dan scalable.
-
-> **Invest once where it makes sense. Reduce recurring costs where they are not necessary.**
+> **Use static IP because the business needs it - not simply because the VPN needs a name that stays the same.**
 
 ---
 
-## Official Documentation & Sources
+# Official Documentation & References
 
-1. [Ruijie Reyee - Network Solution in Chain Store CCTV Scenarios](https://reyee.ruijie.com/id-id/blog/cctv-chain-store-solution/)
-2. [Ruijie Reyee - Retail & Branch Network Solution](https://reyee.ruijie.com/id-id/solutions/smb/retailchain/)
-3. [Ruijie Reyee Routers](https://reyee.ruijie.com/id-id/products/reyee-router/)
-4. [Ruijie Community - How to configure Ruijie DDNS on Ruijie Cloud](https://community.ruijie.com/forum.php?mod=viewthread&tid=5846)
-5. [Ruijie Community - DDNS Use Cases](https://community.ruijie.com/forum.php?mod=viewthread&tid=2225)
-6. [Reyee EG PoC Guide - IPsec VPN](https://reyee.ruijie.com/en-global/support/documents/slide_76717/)
+1. [Reyee EG PoC Guide - IPsec VPN](https://reyee.ruijie.com/en-global/support/documents/slide_76717/)
+2. [Ruijie Community - Configure Ruijie DDNS](https://community.ruijienetworks.com/forum.php?mod=viewthread&tid=5846)
+3. [Ruijie Reyee - Chain Store CCTV Solution](https://reyee.ruijie.com/id-id/blog/cctv-chain-store-solution/)
+4. [Ruijie Reyee - Retail & Branch Network Solution](https://reyee.ruijie.com/id-id/solutions/smb/retailchain/)
+5. [Biznet Gio - Cara Membuat DDNS di cPanel](https://kb.biznetgio.com/id_ID/informasi/cara-membuat-ddns-di-cpanel)
+6. [cPanel - How to Host Dynamic DNS Domains](https://www.cpanel.net/blog/tips-and-tricks/how-to-host-dynamic-dns-domains-with-cpanel/)
 
 ---
 
@@ -749,7 +594,7 @@ Kalau POC menunjukkan DDNS update berjalan, VPN reconnect stabil, service cabang
 
 **Muhamad Fahrul**
 
-- GitHub: https://github.com/aaariel18
-- LinkedIn: https://www.linkedin.com/in/muhamad-fahrul-428948434/
+- GitHub: [github.com/aaariel18](https://github.com/aaariel18)
+- LinkedIn: [Muhamad Fahrul](https://www.linkedin.com/in/muhamad-fahrul-428948434/)
 
-> Tulisan ini merupakan technical note dan ide arsitektur. Implementasi production tetap harus melalui assessment ISP, security review, capacity planning, dan Proof of Concept.
+> Tulisan ini merupakan technical note dan ide arsitektur. Implementasi production tetap harus melalui assessment ISP, security review, capacity planning, serta Proof of Concept.
