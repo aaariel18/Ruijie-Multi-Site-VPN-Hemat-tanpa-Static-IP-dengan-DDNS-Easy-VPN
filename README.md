@@ -137,6 +137,112 @@ Ruijie mendokumentasikan DDNS pada Ruijie Cloud dengan opsi **map to Public IP**
 
 ---
 
+# 1A. Alternatif yang Lebih Profesional: Pakai Domain Sendiri via cPanel DDNS
+
+Selain memakai hostname DDNS bawaan Ruijie/Reyee, kita juga bisa menggunakan **domain milik perusahaan sendiri**.
+
+Contoh:
+
+~~~text
+vpn-hq.company.co.id
+~~~
+
+atau:
+
+~~~text
+hq-vpn.company.co.id
+~~~
+
+Konsepnya:
+
+~~~text
+HQ Internet
+Dynamic Public IP
+        |
+        v
+Ruijie/Reyee Gateway
+        |
+        +-----------------------------+
+                                      |
+                         cPanel Dynamic DNS
+                                      |
+                                      v
+                          vpn-hq.company.co.id
+                                      |
+                                      v
+                           Branch Reyee EG
+                         Peer Gateway = Domain
+~~~
+
+Biznet Gio menjelaskan bahwa fitur **Dynamic DNS di cPanel** dapat mengaitkan alamat IP public yang berubah dengan hostname yang tetap. Setelah hostname DDNS dibuat, cPanel menghasilkan **webcall URL**. Ketika URL tersebut diakses dari jaringan HQ, cPanel mendeteksi public IP yang digunakan lalu memperbarui DNS record secara otomatis.
+
+### Cara kerjanya
+
+1. Domain perusahaan dikelola pada hosting/cPanel yang mendukung Dynamic DNS.
+2. Buat hostname, misalnya:
+
+~~~text
+vpn-hq.company.co.id
+~~~
+
+3. cPanel menghasilkan URL update / webcall untuk hostname tersebut.
+4. Dari sisi HQ, jalankan request ke URL itu secara periodik, misalnya dengan cron job.
+5. Saat public IP ISP berubah, request berikutnya akan membuat DNS record ikut diperbarui.
+6. Di branch Reyee EG, isi **Peer Gateway** menggunakan domain:
+
+~~~text
+vpn-hq.company.co.id
+~~~
+
+Dengan cara ini, konfigurasi VPN di branch tidak perlu diubah setiap kali public IP HQ berubah.
+
+**Reference:** [Biznet Gio - Cara Membuat DDNS di cPanel](https://kb.biznetgio.com/id_ID/informasi/cara-membuat-ddns-di-cpanel)
+
+### Native Ruijie DDNS vs Custom Domain
+
+| Pilihan | Contoh | Kelebihan |
+|---|---|---|
+| Ruijie/Reyee DDNS | `hq-name.ruijieddns.com` | Cepat dan sederhana untuk deployment |
+| Custom Domain via cPanel | `vpn-hq.company.co.id` | Lebih profesional, mudah dikenali, tidak tergantung nama domain vendor |
+
+Untuk perusahaan, saya lebih menyukai custom domain karena dokumentasi internal menjadi lebih rapi:
+
+~~~text
+vpn-hq.company.co.id
+vpn-dc.company.co.id
+vpn-warehouse.company.co.id
+~~~
+
+dibanding harus mengingat hostname yang berbeda dari identitas domain perusahaan.
+
+### Yang perlu diperhatikan
+
+cPanel DDNS hanya menyelesaikan masalah **perubahan alamat IP**. Fitur ini tidak menghilangkan kebutuhan agar endpoint VPN benar-benar dapat dijangkau dari Internet.
+
+Jika Ruijie/Reyee Gateway langsung mendapatkan **public dynamic IP** pada WAN, domain dapat diarahkan ke IP tersebut.
+
+Kalau gateway berada di belakang modem/router lain yang melakukan NAT, sisi upstream perlu disesuaikan. Dokumentasi Reyee untuk IPsec menyebut bahwa jika IPsec server berada di belakang NAT, UDP **500** dan **4500** perlu dipetakan ke VPN gateway.
+
+~~~text
+Internet
+   |
+ISP Modem / ONT
+   |
+   | UDP 500 / 4500
+   v
+Ruijie/Reyee Gateway
+   |
+IPsec VPN
+~~~
+
+Jika koneksi ISP menggunakan **CGNAT** dan tidak memberikan inbound mapping, custom DDNS maupun Ruijie DDNS tidak otomatis menyelesaikan masalah tersebut.
+
+**English takeaway:**  
+A custom domain can replace a vendor DDNS hostname, but DDNS solves name-to-IP changes - it does not bypass CGNAT.
+
+
+---
+
 # 2. Ruijie/Reyee Mendukung Peer VPN Menggunakan IP atau Domain
 
 Pada dokumentasi pengujian IPsec Reyee EG, branch dikonfigurasi sebagai client dan **Peer Gateway** dapat menggunakan:
